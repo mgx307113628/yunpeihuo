@@ -1,5 +1,6 @@
 import unittest
 import yphapp
+from flask import json
 
 class FlaskrTestCase(unittest.TestCase):
 
@@ -12,7 +13,8 @@ class FlaskrTestCase(unittest.TestCase):
         print('tearDown...')
 
     def test_index(self):
-        print('test_index')
-        rv = self.clt.get('/')
-        print(rv.data)
+        s = json.dumps({'aaa':'yqibuqj'})
+        print('test_index', s)
+        rsp = self.clt.get('/', data=s)
+        print('respond:', str(rsp.data))
         #assert 'Hello World!' in rv.data

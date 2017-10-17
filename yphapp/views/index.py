@@ -3,8 +3,6 @@ from .. import app
 
 @app.route('/')
 def hello_world():
-    data = request.get_data()
-    print("%s", str(data))
-    if data:
-        json.loads(data)
+    data = request.get_json(True)
+    print(type(data))
     return jsonify(code='Hello World!')
