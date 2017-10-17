@@ -1,4 +1,4 @@
-from yphapp import app
+from .. import app
 
 @app.route('/')
 def hello_world():
