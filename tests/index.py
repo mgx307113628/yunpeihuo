@@ -1,6 +1,5 @@
-import os
-import sys
 import unittest
+import yphapp
 
 class FlaskrTestCase(unittest.TestCase):
 
@@ -17,12 +16,3 @@ class FlaskrTestCase(unittest.TestCase):
         rv = self.app.get('/')
         print(rv.data)
         #assert 'Hello World!' in rv.data
-
-if __name__ == '__main__':
-    d = os.path.abspath(__file__)
-    workdir = os.path.dirname(os.path.dirname(d))
-    sys.path.insert(0, workdir)
-    print(sys.path)
-    import yphapp
-
-    unittest.main()
