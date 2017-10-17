@@ -5,14 +5,14 @@ class FlaskrTestCase(unittest.TestCase):
 
     def setUp(self):
         print('setUp...')
-        yphapp.app.config['TESTING'] = True
-        self.app = yphapp.app.test_client()
+        app = yphapp.create_app('testing')
+        self.clt = app.test_client()
 
     def tearDown(self):
         print('tearDown...')
 
     def test_index(self):
         print('test_index')
-        rv = self.app.get('/')
+        rv = self.clt.get('/')
         print(rv.data)
         #assert 'Hello World!' in rv.data
