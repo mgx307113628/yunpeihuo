@@ -16,5 +16,5 @@ class FlaskrTestCase(unittest.TestCase):
         s = json.dumps({'aaa':'yqibuqj'})
         print('test_index', s)
         rsp = self.clt.get('/', data=s)
-        print('respond:', str(rsp.data))
+        print('respond:', str(rsp.data, encoding='utf-8'))
         #assert 'Hello World!' in rv.data
