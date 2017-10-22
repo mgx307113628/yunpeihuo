@@ -9,5 +9,8 @@ def register_api(view, endpoint, url, pk='id', pk_type='int'):
 from . import user
 app.register_blueprint(user.bp_user, url_prefix='/user')
 
+from . import order
+app.register_blueprint(order.bp_order, url_prefix='/order')
+
 #from . import order
 #register_api(order.OrderAPI, 'user_api', '/users/', pk='user_id')
