@@ -20,8 +20,8 @@ class FlaskrTestCase(unittest.TestCase):
         #assert 'Hello World!' in rv.data
 
     #def test_query(self):
-    #    import yphapp.models.mdaccount
-    #    account = yphapp.models.mdaccount.Account.query.filter_by(acc='acc_aaabbb').one()
+    #    import yphapp.models.md_account
+    #    account = yphapp.models.md_account.Account.query.filter_by(acc='acc_aaabbb').one()
     #    print(account)
     #    print(account.transporter)
     #    print(account.consignor)
