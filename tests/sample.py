@@ -1,6 +1,7 @@
 import unittest
-import yphapp
 from flask import json
+import yphapp
+
 
 class FlaskrTestCase(unittest.TestCase):
 

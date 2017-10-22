@@ -1,7 +1,9 @@
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 import config
 
 app = None
+db = SQLAlchemy()
 
 def create_app(config_name):
     global app
@@ -13,6 +15,10 @@ def create_app(config_name):
     cfg.init_app(app)
     #额外配置
     app.config.from_envvar('YPH_FLASK_CONFIG_EX', True)
+
+    #数据库
+    db.init_app(app)
+    from . import models
 
     #注册view
     from . import views
