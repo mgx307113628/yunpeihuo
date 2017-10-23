@@ -33,7 +33,7 @@ def gen_order_id():
     if type(tname) is bytes:
         tname = str(tname, encoding='utf8')
     #用uwsgi启动,每个进程最多线程数为10个: uWSGIWorker1Core0
-    if tname[:13] == "b'uWSGIWorker'" and tname[14:18] == 'Core':
+    if tname[:13] == "b'uWSGIWorker" and tname[14:18] == 'Core':
         process = int(tname[13])
         thread = int(tname[18])
         if process >= 10 or thread >= 10:
@@ -68,7 +68,7 @@ def gen_order_id():
     sequence = getattr(order_id_pool, 'sequence', None)
     if sequence is None or refresh:
         sequence = []
-        lst = range(step_size)
+        lst = list(range(step_size))
         crtidx = len(lst)-1
         random.seed(71634+degree) #保证每一阶段,服务器重启后生成的号码序列都一样
         while crtidx >= 0:

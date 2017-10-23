@@ -34,7 +34,7 @@ class Consignor(db.Model):
     id = db.Column(db.Integer, db.ForeignKey('account.id'), primary_key=True)
 
     account = db.relationship('Account', uselist=False)
-    orders = db.relationship('Order', lazy='dynamic')
+    indents = db.relationship('Indent', lazy='dynamic')
 
     def __init__(self):
         pass
