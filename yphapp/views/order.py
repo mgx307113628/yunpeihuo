@@ -33,9 +33,9 @@ def gen_order_id():
     if type(tname) is bytes:
         tname = str(tname, encoding='utf8')
     #用uwsgi启动,每个进程最多线程数为10个: uWSGIWorker1Core0
-    if tname[:11] == 'uWSGIWorker1Core0' and tname[12:16] == 'Core':
-        process = int(tname[11])
-        thread = int(tname[16])
+    if tname[:13] == "b'uWSGIWorker'" and tname[14:18] == 'Core':
+        process = int(tname[13])
+        thread = int(tname[18])
         if process >= 10 or thread >= 10:
             raise RuntimeError()
     #用python启动单进程(用于开发和测试)
