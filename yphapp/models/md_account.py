@@ -30,7 +30,6 @@ class Transporter(db.Model):
 
 
 class Consignor(db.Model):
-    #cargo
     id = db.Column(db.Integer, db.ForeignKey('account.id'), primary_key=True)
 
     account = db.relationship('Account', uselist=False)

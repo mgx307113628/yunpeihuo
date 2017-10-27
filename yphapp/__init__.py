@@ -16,11 +16,17 @@ def create_app(config_name):
     #额外配置
     app.config.from_envvar('YPH_FLASK_CONFIG_EX', True)
 
+    #读取数据
+    from . import data
+    data.load_outter_data()
+
     #数据库
     db.init_app(app)
     from . import models
 
     #注册view
     from . import views
+    from .views import order
+    order.IndentPool().init_pool()
 
     return app

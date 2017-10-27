@@ -1,8 +1,9 @@
 import threading
-from flask import Blueprint, request, jsonify
-from .. import app, db
+from flask import Blueprint, request, jsonify, json
+from .. import app, db, data
 from ..models import md_indent
 from werkzeug.local import Local
+from ..define import *
 import time
 import random
 
@@ -84,17 +85,108 @@ def gen_order_id():
 
     return int('1%d%d%.2d%.4d%.2d'%(process, thread, degree, num, rd)) #共11位
 
+#{
+#    'region' : ['广东省', '深圳市', '宝安区', '西乡街道', '某某物流园'],
+#    'detail' : "某某街某某号",
+#    'coords' : [400.3111, 666.77777],
+#
+
+class IndentPool():
+    _instance = None
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(IndentPool).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def __int__(self):
+        self.indents = {}
+        self.update = False
+
+    def init_pool(self):
+        pass
+
+    def add_new_order(self, accid, orderid, orderinfo):
+        kwargs = {}
+        self.parse_orderinfo(kwargs, orderinfo)
+        indent = md_indent.Indent(orderid, accid, **kwargs)
+        db.session.add(indent)
+        db.session.commit()
+        self.indents[orderid] = indent
+        self.update = True
+
+    def parse_orderinfo(self, kwargs, info):
+        cargo_type = info.get('cargo_type')
+        rent_type = info.get('rent_type')
+        lct_depart = info.get('lct_depart')
+        lct_dest = info.get('lct_dest')
+        tmlst = info.get('timestamps')
+        loader = info.get('loader')
+        unloader = info.get('unloader')
+        cargo = info.get('cargo')
+
+        if (cargo_type is None or rent_type is None or lct_depart is None
+            or lct_dest is None or tmlst is None or loader is None
+            or unloader is None):
+            raise RuntimeError()
+
+        if cargo_type not in CARGO_TYPE_ALL:
+            raise RuntimeError()
+        kwargs['cargo_type'] = cargo_type
+
+        if rent_type not in RENT_TYPE_ALL:
+            raise RuntimeError()
+        kwargs['rent_type'] = rent_type
+
+        code, detail, long, lat = self.parse_locate(lct_depart)
+        kwargs['lct_dpt_code'] = code
+        kwargs['lct_dpt_detail'] = detail
+        kwargs['lct_dpt_long'] = long
+        kwargs['lct_dpt_lat'] = lat
+
+        code, detail, long, lat = self.parse_locate(lct_dest)
+        kwargs['lct_dst_code'] = code
+        kwargs['lct_dst_detail'] = detail
+        kwargs['lct_dst_long'] = long
+        kwargs['lct_dst_lat'] = lat
+
+        if not (tmlst[0] <= tmlst[1] < tmlst[2] <= tmlst[3]):
+            raise RuntimeError()
+        kwargs['tm_dpt_min'] = tmlst[0]
+        kwargs['tm_dpt_max'] = tmlst[1]
+        kwargs['tm_dst_min'] = tmlst[1]
+        kwargs['tm_dst_max'] = tmlst[1]
+
+        kwargs['loader_name'] = loader[0]
+        kwargs['loader_phone'] = loader[1]
+        kwargs['unloader_name'] = unloader[0]
+        kwargs['unloader_phone'] = unloader[1]
+
+        kwargs['cargo'] = cargo
+
+    def parse_locate(self, location):
+        region = location.get('region')
+        if region is None:
+            raise RuntimeError()
+        code = data.LOCATIONS.get(tuple(region))
+        if code is None:
+            raise RuntimeError()
+        detail = location.get('detail')
+        longitude, latitude = location.get('coords')
+        return code, detail, longitude, latitude
+
 @bp_order.route('/new')
 def order_new():
     print("order_new 000")
-    #data = request.get_json(True)
-    #accid = data.get('accid')
-    #print("order_new 111 %s"%(accid))
+    dt = request.get_json(True)
+    accid = dt.get('accid')
+    orderinfo = dt.get('order')
+    print("order_new 111 %s"%(accid))
     orderid = gen_order_id()
+    new_order = IndentPool().add_new_order(accid, orderid, orderinfo)
     return jsonify(code=0, msg='success', data={'orderid':orderid})
-    #account = md_account.Account(acc, pwd)
-    #account.transporter = md_account.Transporter()
-    #db.session.add(account)
-    #db.session.commit()
-    #print("order_new 222 %s %s %d"%(acc, pwd, account.id))
-    #return jsonify(code=0, msg='success', data={'id':account.id, 'account':acc})
+
+@bp_order.route('/list')
+def order_list():
+    dt = request.get_json(True)
+    page = dt.get('page')
+    return IndentPool().show_orders(page)
