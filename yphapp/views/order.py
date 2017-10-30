@@ -91,11 +91,11 @@ def gen_order_id():
 #    'coords' : [400.3111, 666.77777],
 #
 
-class IndentPool():
+class IndentPool:
     _instance = None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(IndentPool).__new__(cls, *args, **kwargs)
+            cls._instance = object.__new__(cls, *args, **kwargs)
         return cls._instance
 
     def __int__(self):
@@ -161,7 +161,7 @@ class IndentPool():
         kwargs['unloader_name'] = unloader[0]
         kwargs['unloader_phone'] = unloader[1]
 
-        kwargs['cargo'] = cargo
+        kwargs['cargo'] = json.dumps(cargo)
 
     def parse_locate(self, location):
         region = location.get('region')
