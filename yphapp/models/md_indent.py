@@ -32,20 +32,68 @@ class Indent(db.Model):
     status = db.relationship('IndentStatus', uselist=False)
     cargo = db.relationship('IndentCargo', uselist=False)
 
-    def __init__(self, id, csgid, **kwargs):
-        self.id = id
-        self.csgid = csgid
+    INNERPROP_TO_OUTTERNAME = {
+        'id'            : ['orderid', True, None],
+        'csgid'         : ['csgid', True, None],
+        'tspid'         : ['tspid', True, None],
+        'cargo_type'    : ['cargo_type', True, None],
+        'rent_type'     : ['rent_type', True, None],
+        'price'         : ['price', True, None],
+        'status'        : {
+                            'status' : ['status', True, None],
+                          },
+        'detail'        : {
+                            'dpt_lctcode'   : ['dpt_lctcode', True, None],
+                            'dpt_lctdtl'    : ['dpt_lctdtl', True, None],
+                            'dpt_lctlong'   : ['dpt_lctlong', True, None],
+                            'dpt_lctlat'    : ['dpt_lctlat', True, None],
+                            'dpt_tmclk'     : ['dpt_tmclk', True, None],
+                            'dpt_tmload'    : ['dpt_tmload', True, None],
+                            'dpt_ldrname'   : ['dpt_ldrname', True, None],
+                            'dpt_ldrphone'  : ['dpt_ldrphone', True, None],
+                            'dst_lctcode'   : ['dst_lctcode', True, None],
+                            'dst_lctdtl'    : ['dst_lctdtl', True, None],
+                            'dst_lctlong'   : ['dst_lctlong', True, None],
+                            'dst_lctlat'    : ['dst_lctlat', True, None],
+                            'dst_tmclk'     : ['dst_tmclk', True, None],
+                            'dst_tmunload'  : ['dst_tmunload', True, None],
+                            'dst_uldrname'  : ['dst_uldrname', True, None],
+                            'dst_uldrphone' : ['dst_uldrphone', True, None],
+                          },
+        'cargo'         : {
+                            'cargo'         : ['cargo', True, None],
+                            'weight'        : ['weight', False, None],
+                            'volume'        : ['volume', False, None],
+                          },
+    }
+
+    def __init__(self, **kwargs):
         self.detail = IndentDetail()
         self.status = IndentStatus()
         self.cargo = IndentCargo()
-        for k, v in kwargs.pop('detail', {}).items():
-            setattr(self.detail, k, v)
-        for k, v in kwargs.pop('status', {}).items():
-            setattr(self.status, k, v)
-        for k, v in kwargs.pop('cargo', {}).items():
-            setattr(self.cargo, k, v)
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        for k, v in INNERPROP_TO_OUTTERNAME.iteritems():
+            if v is list:
+                name, force, default = v
+                if name not in kwargs:
+                    if force:
+                        raise RuntimeError
+                    else:
+                        value = default
+                else:
+                    value = kwargs[name]
+                setattr(self, k, value)
+            if v is dict:
+                sub = getattr(self, k)
+                for _k, _v in v.iteritems():
+                    name, force, default = v
+                    if name not in kwargs:
+                        if force:
+                            raise RuntimeError
+                        else:
+                            value = default
+                    else:
+                        value = kwargs[name]
+                    setattr(sub, _k, value)
 
     def __repr__(self):
         return '<Indent %s>'%str(self.id)

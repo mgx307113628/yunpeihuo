@@ -91,7 +91,20 @@ def gen_order_id():
 #    'coords' : [400.3111, 666.77777],
 #
 
-class IndentPool:
+class Order:
+    def __init__(self, id, csgid, **kwargs):
+        self.id = id
+        self.csgid = csgid
+        for k, v in kwargs.pop('detail', {}).items():
+            setattr(self, k, v)
+        for k, v in kwargs.pop('status', {}).items():
+            setattr(self, k, v)
+        for k, v in kwargs.pop('cargo', {}).items():
+            setattr(self, k, v)
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+class OrderPool:
     _instance = None
     _initflag = False
     def __new__(cls, *args, **kwargs):
@@ -100,17 +113,17 @@ class IndentPool:
         return cls._instance
 
     def __init__(self):
-        if IndentPool._initflag == False:
-            IndentPool._initflag = True
-            self.indents_dct = {}
-            self.indents_lst = []
+        if OrderPool._initflag == False:
+            OrderPool._initflag = True
+            self.order_dct = {}
+            self.order_lst = []
             self.update = False
 
     def init_pool(self):
         for indent in md_indent.Indent.query.all():
-            self.indents_dct[indent.id] = indent
-            self.indents_lst.append(indent)
-        print(id(self.indents_lst))
+            order = Order(
+            self.order_dct[indent.id] = indent
+            self.order_lst.append(indent)
         return
 
     def add_new_order(self, accid, orderid, orderinfo):
@@ -119,8 +132,9 @@ class IndentPool:
         indent = md_indent.Indent(orderid, accid, **kwargs)
         db.session.add(indent)
         db.session.commit()
-        self.indents_dct[orderid] = indent
-        self.indents_lst.append(indent)
+        order = Order(orderid, accid, **kwargs)
+        self.order_dct[orderid] = order
+        self.order_lst.append(order)
         self.update = True
 
     def show_orders(self, current, num):
@@ -129,7 +143,7 @@ class IndentPool:
         n = 0
         if current == 0:
             send = True
-        for idx, indent in enumerate(self.indents_lst):
+        for idx, indent in enumerate(self.order_lst):
             if send == True:
                 sendlst.append(self.encode_order(indent))
                 n += 1
@@ -137,8 +151,8 @@ class IndentPool:
                     break
             elif idx+1 == current:
                 send = True
-        self.indents_dct = {}
-        self.indents_lst = []
+        self.order_dct = {}
+        self.order_lst = []
         return jsonify(code=0, msg='success', data={'orders':sendlst})
 
     def encode_order(self, indent):
@@ -259,23 +273,21 @@ def order_new():
     orderinfo['status'] = INDENT_STATUS_PUBLISHING 
     print("order_new 111 %s"%(accid))
     orderid = gen_order_id()
-    new_order = IndentPool().add_new_order(accid, orderid, orderinfo)
+    new_order = OrderPool().add_new_order(accid, orderid, orderinfo)
     return jsonify(code=0, msg='success', data={'orderid':str(orderid)})
 
 @bp_order.route('/list', methods=['POST'])
 def order_list():
     print('order_list 111111111111111')
-    IndentPool().init_pool()
     dt = request.get_json(True)
     current = int(dt.get('current', 0))
     num = int(dt.get('num'))
-    return IndentPool().show_orders(current, num)
+    return OrderPool().show_orders(current, num)
 
 @bp_order.route('/take', methods=['POST'])
 def order_take():
     print('order_take 111111111111111')
-    IndentPool().init_pool()
     dt = request.get_json(True)
     accid = int(dt.get('accid'))
     orderid = int(dt.get('orderid'))
-    return IndentPool().take_order(accid, orderid)
+    return OrderPool().take_order(accid, orderid)
