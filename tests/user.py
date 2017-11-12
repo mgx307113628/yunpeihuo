@@ -13,45 +13,38 @@ class FlaskrTestCase(unittest.TestCase):
     def tearDown(self):
         print('tearDown................................@')
 
-    #def test_regitster(self):
-    #    data = json.dumps({'account':'account002', 'password':'password002'})
-    #    rsp = self.clt.post('/user/register', data=data)
-    #    print('respond:', str(rsp.data, encoding='utf-8'))
-    #    #assert 'Hello World!' in rv.data
-
-    #def test_query(self):
-    #    import yphapp.models.md_account
-    #    account = yphapp.models.md_account.Account.query.filter_by(acc='acc_aaabbb').one()
-    #    print(account)
-    #    print(account.transporter)
-    #    print(account.consignor)
-
-    def test_query(self):
-        print('test_query1')
-        data = json.dumps({"account":"account001"})
-        rsp = self.clt.post('/user/query', data=data)
+    def test_regitster(self):
+        print('test_register ######')
+        data = json.dumps({'account':'account001', 'password':'password001'})
+        rsp = self.clt.post('/user/register', data=data)
+        data = json.dumps({'account':'account002', 'password':'password002'})
+        rsp = self.clt.post('/user/register', data=data)
+        data = json.dumps({'account':'account003', 'password':'password003'})
+        rsp = self.clt.post('/user/register', data=data)
+        data = json.dumps({'account':'account004', 'password':'password004'})
+        rsp = self.clt.post('/user/register', data=data)
+        data = json.dumps({'account':'account005', 'password':'password005'})
+        rsp = self.clt.post('/user/register', data=data)
+        data = json.dumps({'account':'account006', 'password':'password006'})
+        rsp = self.clt.post('/user/register', data=data)
+        data = json.dumps({'account':'account007', 'password':'password007'})
+        rsp = self.clt.post('/user/register', data=data)
+        data = json.dumps({'account':'account008', 'password':'password008'})
+        rsp = self.clt.post('/user/register', data=data)
+        data = json.dumps({'account':'account009', 'password':'password009'})
+        rsp = self.clt.post('/user/register', data=data)
+        data = json.dumps({'account':'account010', 'password':'password010'})
+        rsp = self.clt.post('/user/register', data=data)
         print('respond status:', rsp.status) 
         print('respond header:', rsp.headers)
         print('respond data:', str(rsp.data, encoding='utf-8'))
+        #assert 'Hello World!' in rv.data
 
-    def test_query2(self):
-        print('test_query2>>>>>>>>>>>>@')
-        data = json.dumps({"account":"account002"})
-        rsp = self.clt.post('/user/query', data=data)
-        print('respond status:', rsp.status) 
-        print('respond header:', rsp.headers)
-        print('respond data:', str(rsp.data, encoding='utf-8'))
-
-    #def test_query2(self):
-    #    rsp = self.clt.get('/user/query')
+    #def test_login(self):
+    #    print('test_login ######')
+    #    data = json.dumps({'account':'account003', 'password':'password003'})
+    #    rsp = self.clt.post('/user/login', data=data)
     #    print('respond status:', rsp.status) 
     #    print('respond header:', rsp.headers)
     #    print('respond data:', str(rsp.data, encoding='utf-8'))
-
-    #def test_login(self):
-    #    return
-    #    data = json.dumps({'account':'acc_aaabbb', 'password':'pwd_111222'})
-    #    rsp = self.clt.get('/user/login', data=data)
-    #    print('respond status:', rsp.status)
-    #    print('respond header:', rsp.headers)
-    #    print('respond data:', str(rsp.data, encoding='utf-8'))
+    #    #assert 'Hello World!' in rv.data

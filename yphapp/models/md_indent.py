@@ -1,4 +1,7 @@
 from .. import db
+import time
+from flask import json
+import datetime
 
 
 class IndentNum(db.Model):
@@ -67,12 +70,15 @@ class Indent(db.Model):
                           },
     }
 
-    def __init__(self, **kwargs):
+    def __init__(self, id, **kwargs):
+        self.id = id
         self.detail = IndentDetail()
         self.status = IndentStatus()
         self.cargo = IndentCargo()
-        for k, v in INNERPROP_TO_OUTTERNAME.items():
-            if v is list:
+        if not kwargs:
+            return
+        for k, v in self.INNERPROP_TO_OUTTERNAME.items():
+            if type(v) is list:
                 name, force, default = v
                 if name not in kwargs:
                     if force:
@@ -82,10 +88,10 @@ class Indent(db.Model):
                 else:
                     value = kwargs[name]
                 setattr(self, k, value)
-            if v is dict:
+            if type(v) is dict:
                 sub = getattr(self, k)
                 for _k, _v in v.items():
-                    name, force, default = v
+                    name, force, default = _v
                     if name not in kwargs:
                         if force:
                             raise RuntimeError
@@ -94,16 +100,17 @@ class Indent(db.Model):
                     else:
                         value = kwargs[name]
                         if _k in ['dpt_tmclk', 'dst_tmclk']:
-                            value = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(value))
+                            #value = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(value))
+                            value = datetime.datetime.fromtimestamp(value)
                         elif _k == 'cargo':
                             value = json.dumps(value)
                     setattr(sub, _k, value)
 
     def SyncProp(self, dct):
-        for k, v in INNERPROP_TO_OUTTERNAME.items():
-            if v is list:
+        for k, v in self.INNERPROP_TO_OUTTERNAME.items():
+            if type(v) is list:
                 dct[v[0]] = getattr(self, k)
-            if v is dict:
+            if type(v) is dict:
                 sub = getattr(self, k)
                 for _k, _v in v.items():
                     value = getattr(sub, _k)

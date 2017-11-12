@@ -121,17 +121,44 @@ class Order:
         'volume',
     ]
     def __init__(self, **kwargs):
-        self.update = True
-        self.cache = None
+        self.orderid = None
+        self.csgid = None
+        self.tspid = None
+        self.cargo_type = None
+        self.rent_type = None
+        self.price = None
+        self.status = None
+        self.dpt_lctcode = None
+        self.dpt_lctdtl = None
+        self.dpt_lctlong = None
+        self.dpt_lctlat = None
+        self.dpt_tmclk = None
+        self.dpt_tmload = None
+        self.dpt_ldrname = None
+        self.dpt_ldrphone = None
+        self.dst_lctcode = None
+        self.dst_lctdtl = None
+        self.dst_lctlong = None
+        self.dst_lctlat = None
+        self.dst_tmclk = None
+        self.dst_tmunload = None
+        self.dst_uldrname = None
+        self.dst_uldrphone = None
+        self.cargo = None
+        self.weight = None
+        self.volume = None
+
         for k, v in kwargs.items():
             setattr(self, k, v)
+        self.update = True
+        self.cache = None
 
     def CalculatePrice(self):
         self.price = random.randint(1000, 9000)
         self.update = True
 
     def InsertTable(self):
-        indent = md_indent.Indent(**self.__dict__)
+        indent = md_indent.Indent(self.orderid, **self.__dict__)
         db.session.add(indent)
         db.session.commit()
 
@@ -144,22 +171,23 @@ class Order:
         data['cargo_type'] = self.cargo_type
         data['rent_type'] = self.rent_type
         data['price'] = self.price
-        data['lct_depart'] = self.encode_locate(
-                                    self.dpt_lctcode,
-                                    self.dpt_lctdtl,
-                                    self.dpt_lctlong,
-                                    self.dpt_lctlat,)
-        data['lct_dest'] = self.encode_locate(
-                                    self.dst_lctcode,
-                                    self.dst_lctdtl,
-                                    self.dst_lctlong,
-                                    self.dst_lctlat,)
-        data['times'] = [ self.dpt_tmclk, self.dpt_tmload, self.dst_tmclk, self.dst_tmunload,]
-        data['loader'] = [ self.detail.dpt_ldrname, self.detail.dpt_ldrphone,]
-        data['unloader'] = [ self.detail.dst_uldrname, self.detail.dst_uldrphone,]
+        data['lct_depart'] = encode_locate(self.dpt_lctcode, self.dpt_lctdtl, self.dpt_lctlong, self.dpt_lctlat,)
+        data['lct_dest'] = encode_locate(self.dst_lctcode, self.dst_lctdtl, self.dst_lctlong, self.dst_lctlat,)
+        data['times'] = [self.dpt_tmclk, self.dpt_tmload, self.dst_tmclk, self.dst_tmunload,]
+        data['loader'] = [self.dpt_ldrname, self.dpt_ldrphone,]
+        data['unloader'] = [self.dst_uldrname, self.dst_uldrphone,]
         data['cargo'] = self.cargo
         self.cache = data
         return self.cache
+
+    def Take(self, accid):
+        indent = md_indent.Indent.query.filter_by(id=self.orderid).one()
+        indent.tspid = accid
+        indent.status.status = INDENT_STATUS_GOTOSTART
+        db.session.commit()
+        self.tspid = accid
+        self.status = INDENT_STATUS_GOTOSTART
+        self.update = True
 
 
 class OrderPool:
@@ -202,9 +230,9 @@ class OrderPool:
         n = 0
         if current == 0:
             send_flag = True
-        for idx, indent in enumerate(self.order_lst):
+        for idx, order in enumerate(self.order_lst):
             if send_flag == True:
-                send_data.append(self.encode_order_data())
+                send_data.append(order.encode_order_data())
                 n += 1
                 if n >= num:
                     break
@@ -214,12 +242,13 @@ class OrderPool:
 
 
     def take_order(self, accid, orderid):
-        indent = md_indent.Indent.query.filter_by(id=orderid).one()
-        indent.tspid = accid
-        db.session.commit()
+        order = self.order_dct.get(orderid)
+        if order is None:
+            return jsonify(code=1, msg='order not exist')
+        order.Take(accid)
         return jsonify(code=0, msg='success', data={'orderid':str(orderid)})
 
-def encode_locate(self, code, detail, longitude, latitude):
+def encode_locate(code, detail, longitude, latitude):
     dct = {}
     dct['region'] = data.CODE_LOCATION.get(code)
     dct['detail'] = detail
@@ -310,6 +339,7 @@ def order_list():
     dt = request.get_json(True)
     current = int(dt.get('current', 0))
     num = int(dt.get('num'))
+    print('order_list 222222222222222', current, num)
     return OrderPool().show_orders(current, num)
 
 @bp_order.route('/take', methods=['POST'])

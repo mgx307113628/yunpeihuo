@@ -5,7 +5,7 @@ import config
 app = None
 db = SQLAlchemy()
 
-def create_app(config_name):
+def create_app(config_name, crtdb=False):
     global app
     app = Flask(__name__)
 
@@ -27,7 +27,8 @@ def create_app(config_name):
     #注册view
     from . import views
     from .views import order
-    with app.app_context():
-        order.OrderPool().init_pool()
+    if not crtdb:
+        with app.app_context():
+            order.OrderPool().init_pool()
 
     return app

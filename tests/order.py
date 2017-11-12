@@ -71,6 +71,9 @@ class FlaskrTestCase(unittest.TestCase):
     #    #od['cargo' : [<json>货物,...],
 
     #    rsp = self.clt.post('/order/new', data=json.dumps(data))
+    #    rsp = self.clt.post('/order/new', data=json.dumps(data))
+    #    rsp = self.clt.post('/order/new', data=json.dumps(data))
+    #    rsp = self.clt.post('/order/new', data=json.dumps(data))
     #    print('respond status:', rsp.status) 
     #    print('respond header:', rsp.headers)
     #    print('respond data:', str(rsp.data, encoding='utf-8'))
@@ -80,3 +83,8 @@ class FlaskrTestCase(unittest.TestCase):
         print('respond status:', rsp.status) 
         print('respond header:', rsp.headers)
         print('respond data:', str(rsp.data, encoding='utf-8'))
+        ob = json.loads(str(rsp.data, encoding='utf-8'))
+        dt = ob['data']['orders']
+        print("length:%d"%len(dt))
+        for x in dt:
+            print('orderid:%s'%x['orderid'])

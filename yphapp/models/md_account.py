@@ -5,6 +5,18 @@ class Account(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     acc = db.Column(db.String(50), unique=True)#TODO 调整长度
     pwd = db.Column(db.String(50))#TODO 调整长度
+    crttime = db.Column(db.TIMESTAMP)
+    crtip = db.Column(db.String(50))
+    crtmac = db.Column(db.String(50))
+    crtplat = db.Column(db.SmallInteger)
+    crtrole = db.Column(db.SmallInteger)
+    name = db.Column(db.String(20))
+    idno = db.Column(db.String(20))
+    lasttime = db.Column(db.TIMESTAMP)
+    lastip = db.Column(db.String(50))
+    lastmac = db.Column(db.String(50))
+    lastplat = db.Column(db.SmallInteger)
+    lastrole = db.Column(db.SmallInteger)
 
     transporter = db.relationship('Transporter', uselist=False)
     consignor = db.relationship('Consignor', uselist=False)
