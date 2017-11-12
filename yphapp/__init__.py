@@ -27,6 +27,7 @@ def create_app(config_name):
     #注册view
     from . import views
     from .views import order
-    order.IndentPool().init_pool()
+    #with app.app_context():
+    #    order.IndentPool().init_pool()
 
     return app
