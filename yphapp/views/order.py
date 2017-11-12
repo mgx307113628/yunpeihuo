@@ -116,6 +116,7 @@ class IndentPool:
     def add_new_order(self, accid, orderid, orderinfo):
         kwargs = {}
         self.decode_order(kwargs, orderinfo)
+        self.CalculatePrice(kwargs)
         indent = md_indent.Indent(orderid, accid, **kwargs)
         db.session.add(indent)
         db.session.commit()
@@ -147,6 +148,7 @@ class IndentPool:
         data['status'] = indent.status.status
         data['cargo_type'] = indent.cargo_type
         data['rent_type'] = indent.rent_type
+        data['price'] = indent.price
         data['lct_depart'] = self.encode_locate(
                                     indent.detail.dpt_lctcode,
                                     indent.detail.dpt_lctdtl,
@@ -236,6 +238,10 @@ class IndentPool:
         longitude, latitude = location.get('coords')
         return code, detail, longitude, latitude
 
+    def CalculatePrice(self, kwargs):
+        kwargs['price'] = random.randint(1000, 9000)
+        return
+
     def encode_locate(self, code, detail, longitude, latitude):
         dct = {}
         dct['region'] = data.CODE_LOCATION.get(code)
@@ -244,10 +250,10 @@ class IndentPool:
         return dct
     
     def take_order(self, accid, orderid):
-        indent = md_indent.query.filter_by(id=orderid).one()
+        indent = md_indent.Indent.query.filter_by(id=orderid).one()
         indent.tspid = accid
         db.session.commit()
-        return jsonify(code=0, msg='success', data={'orderid':orderid})
+        return jsonify(code=0, msg='success', data={'orderid':str(orderid)})
 
 
 @bp_order.route('/new', methods=['POST'])
@@ -274,8 +280,8 @@ def order_list():
 @bp_order.route('/take', methods=['POST'])
 def order_take():
     print('order_take 111111111111111')
-    IndentPool().init_pool()
     dt = request.get_json(True)
     accid = int(dt.get('accid'))
     orderid = int(dt.get('orderid'))
+    print('order_take 222222222222222 acc:%d  orderid:%d'%(accid, orderid))
     return IndentPool().take_order(accid, orderid)
