@@ -35,7 +35,7 @@ class Indent(db.Model):
     INNERPROP_TO_OUTTERNAME = {
         'id'            : ['orderid', True, None],
         'csgid'         : ['csgid', True, None],
-        'tspid'         : ['tspid', True, None],
+        'tspid'         : ['tspid', False, None],
         'cargo_type'    : ['cargo_type', True, None],
         'rent_type'     : ['rent_type', True, None],
         'price'         : ['price', True, None],
@@ -71,7 +71,7 @@ class Indent(db.Model):
         self.detail = IndentDetail()
         self.status = IndentStatus()
         self.cargo = IndentCargo()
-        for k, v in INNERPROP_TO_OUTTERNAME.iteritems():
+        for k, v in INNERPROP_TO_OUTTERNAME.items():
             if v is list:
                 name, force, default = v
                 if name not in kwargs:
@@ -84,7 +84,7 @@ class Indent(db.Model):
                 setattr(self, k, value)
             if v is dict:
                 sub = getattr(self, k)
-                for _k, _v in v.iteritems():
+                for _k, _v in v.items():
                     name, force, default = v
                     if name not in kwargs:
                         if force:
@@ -93,7 +93,25 @@ class Indent(db.Model):
                             value = default
                     else:
                         value = kwargs[name]
+                        if _k in ['dpt_tmclk', 'dst_tmclk']:
+                            value = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(value))
+                        elif _k == 'cargo':
+                            value = json.dumps(value)
                     setattr(sub, _k, value)
+
+    def SyncProp(self, dct):
+        for k, v in INNERPROP_TO_OUTTERNAME.items():
+            if v is list:
+                dct[v[0]] = getattr(self, k)
+            if v is dict:
+                sub = getattr(self, k)
+                for _k, _v in v.items():
+                    value = getattr(sub, _k)
+                    if _k in ['dpt_tmclk', 'dst_tmclk']:
+                        value = int(time.mktime(value.timetuple()))
+                    elif _k == 'cargo':
+                        value = json.loads(value)
+                    dct[_v[0]] = value
 
     def __repr__(self):
         return '<Indent %s>'%str(self.id)

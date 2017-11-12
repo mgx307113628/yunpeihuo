@@ -92,17 +92,75 @@ def gen_order_id():
 #
 
 class Order:
-    def __init__(self, id, csgid, **kwargs):
-        self.id = id
-        self.csgid = csgid
-        for k, v in kwargs.pop('detail', {}).items():
-            setattr(self, k, v)
-        for k, v in kwargs.pop('status', {}).items():
-            setattr(self, k, v)
-        for k, v in kwargs.pop('cargo', {}).items():
-            setattr(self, k, v)
+    ORDER_PROP = [
+        'orderid',
+        'csgid',
+        'tspid',
+        'cargo_type',
+        'rent_type',
+        'price',
+        'status',
+        'dpt_lctcode',
+        'dpt_lctdtl',
+        'dpt_lctlong',
+        'dpt_lctlat',
+        'dpt_tmclk',
+        'dpt_tmload',
+        'dpt_ldrname',
+        'dpt_ldrphone',
+        'dst_lctcode',
+        'dst_lctdtl',
+        'dst_lctlong',
+        'dst_lctlat',
+        'dst_tmclk',
+        'dst_tmunload',
+        'dst_uldrname',
+        'dst_uldrphone',
+        'cargo',
+        'weight',
+        'volume',
+    ]
+    def __init__(self, **kwargs):
+        self.update = True
+        self.cache = None
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    def CalculatePrice(self):
+        self.price = random.randint(1000, 9000)
+        self.update = True
+
+    def InsertTable(self):
+        indent = md_indent.Indent(**self.__dict__)
+        db.session.add(indent)
+        db.session.commit()
+
+    def encode_order_data(self):
+        if not self.update and self.cache is not None:
+            return self.cache
+        data = {}
+        data['orderid'] = str(self.orderid)
+        data['status'] = self.status
+        data['cargo_type'] = self.cargo_type
+        data['rent_type'] = self.rent_type
+        data['price'] = self.price
+        data['lct_depart'] = self.encode_locate(
+                                    self.dpt_lctcode,
+                                    self.dpt_lctdtl,
+                                    self.dpt_lctlong,
+                                    self.dpt_lctlat,)
+        data['lct_dest'] = self.encode_locate(
+                                    self.dst_lctcode,
+                                    self.dst_lctdtl,
+                                    self.dst_lctlong,
+                                    self.dst_lctlat,)
+        data['times'] = [ self.dpt_tmclk, self.dpt_tmload, self.dst_tmclk, self.dst_tmunload,]
+        data['loader'] = [ self.detail.dpt_ldrname, self.detail.dpt_ldrphone,]
+        data['unloader'] = [ self.detail.dst_uldrname, self.detail.dst_uldrphone,]
+        data['cargo'] = self.cargo
+        self.cache = data
+        return self.cache
+
 
 class OrderPool:
     _instance = None
@@ -121,165 +179,129 @@ class OrderPool:
 
     def init_pool(self):
         for indent in md_indent.Indent.query.all():
-            order = Order(
-            self.order_dct[indent.id] = indent
-            self.order_lst.append(indent)
+            order = Order()
+            indent.SyncProp(order.__dict__)
+            self.order_dct[order.orderid] = order
+            self.order_lst.append(order)
         return
 
-    def add_new_order(self, accid, orderid, orderinfo):
-        kwargs = {}
-        self.decode_order(kwargs, orderinfo)
-        self.CalculatePrice(kwargs)
-        indent = md_indent.Indent(orderid, accid, **kwargs)
-        db.session.add(indent)
-        db.session.commit()
-        order = Order(orderid, accid, **kwargs)
+    def add_new_order(self, accid, orderid, orderdata):
+        orderdata.update({'orderid':orderid,
+                            'csgid':accid,
+                            'status':INDENT_STATUS_PUBLISHING})
+        order = Order(**orderdata)
+        order.CalculatePrice()
+        order.InsertTable()
         self.order_dct[orderid] = order
         self.order_lst.append(order)
         self.update = True
 
     def show_orders(self, current, num):
-        sendlst = []
-        send = False
+        send_data = []
+        send_flag = False
         n = 0
         if current == 0:
-            send = True
+            send_flag = True
         for idx, indent in enumerate(self.order_lst):
-            if send == True:
-                sendlst.append(self.encode_order(indent))
+            if send_flag == True:
+                send_data.append(self.encode_order_data())
                 n += 1
                 if n >= num:
                     break
             elif idx+1 == current:
-                send = True
-        self.order_dct = {}
-        self.order_lst = []
-        return jsonify(code=0, msg='success', data={'orders':sendlst})
+                send_flag = True
+        return jsonify(code=0, msg='success', data={'orders':send_data})
 
-    def encode_order(self, indent):
-        data = {}
-        data['orderid'] = str(indent.id)
-        data['status'] = indent.status.status
-        data['cargo_type'] = indent.cargo_type
-        data['rent_type'] = indent.rent_type
-        data['price'] = indent.price
-        data['lct_depart'] = self.encode_locate(
-                                    indent.detail.dpt_lctcode,
-                                    indent.detail.dpt_lctdtl,
-                                    indent.detail.dpt_lctlong,
-                                    indent.detail.dpt_lctlat,)
-        data['lct_dest'] = self.encode_locate(
-                                    indent.detail.dst_lctcode,
-                                    indent.detail.dst_lctdtl,
-                                    indent.detail.dst_lctlong,
-                                    indent.detail.dst_lctlat,)
-        data['times'] = [
-            #int(time.mktime(time.strptime(indent.detail.dpt_tmclk,'%Y-%m-%d %H:%M:%S'))),
-            int(time.mktime(indent.detail.dpt_tmclk.timetuple())),
-            indent.detail.dpt_tmload,
-            #int(time.mktime(time.strptime(indent.detail.dst_tmclk,'%Y-%m-%d %H:%M:%S'))),
-            int(time.mktime(indent.detail.dst_tmclk.timetuple())),
-            indent.detail.dst_tmunload,]
-        data['loader'] = [ indent.detail.dpt_ldrname, indent.detail.dpt_ldrphone,]
-        data['unloader'] = [ indent.detail.dst_uldrname, indent.detail.dst_uldrphone,]
-        data['cargo'] = json.loads(indent.cargo.cargo)
-        return data
 
-    def decode_order(self, kwargs, info):
-        status = info.get('status')
-        cargo_type = info.get('cargo_type')
-        rent_type = info.get('rent_type')
-        lct_depart = info.get('lct_depart')
-        lct_dest = info.get('lct_dest')
-        tmlst = info.get('times')
-        loader = info.get('loader')
-        unloader = info.get('unloader')
-        cargo = info.get('cargo')
-
-        dtl = kwargs.setdefault('detail', {})
-        st = kwargs.setdefault('status', {})
-        cg = kwargs.setdefault('cargo', {})
-
-        st['status'] = status
-
-        if (cargo_type is None or rent_type is None or lct_depart is None
-            or lct_dest is None or tmlst is None or loader is None
-            or unloader is None):
-            raise RuntimeError()
-
-        if cargo_type not in CARGO_TYPE_ALL:
-            raise RuntimeError()
-        kwargs['cargo_type'] = cargo_type
-
-        if rent_type not in RENT_TYPE_ALL:
-            raise RuntimeError()
-        kwargs['rent_type'] = rent_type
-
-        code, detail, long, lat = self.decode_locate(lct_depart)
-        dtl['dpt_lctcode'] = code
-        dtl['dpt_lctdtl'] = detail
-        dtl['dpt_lctlong'] = long
-        dtl['dpt_lctlat'] = lat
-
-        code, detail, long, lat = self.decode_locate(lct_dest)
-        dtl['dst_lctcode'] = code
-        dtl['dst_lctdtl'] = detail
-        dtl['dst_lctlong'] = long
-        dtl['dst_lctlat'] = lat
-
-        #if not (tmlst[0] <= tmlst[1] < tmlst[2] <= tmlst[3]):
-        #    raise RuntimeError()
-        dtl['dpt_tmclk'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(tmlst[0]))
-        dtl['dpt_tmload'] = tmlst[1]
-        dtl['dst_tmclk'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(tmlst[2]))
-        dtl['dst_tmunload'] = tmlst[3]
-
-        dtl['dpt_ldrname'] = loader[0]
-        dtl['dpt_ldrphone'] = loader[1]
-        dtl['dst_uldrname'] = unloader[0]
-        dtl['dst_uldrphone'] = unloader[1]
-
-        cg['cargo'] = json.dumps(cargo)
-
-    def decode_locate(self, location):
-        region = location.get('region')
-        if region is None:
-            raise RuntimeError()
-        code = data.LOCATION_CODE.get(tuple(region))
-        if code is None:
-            raise RuntimeError()
-        detail = location.get('detail')
-        longitude, latitude = location.get('coords')
-        return code, detail, longitude, latitude
-
-    def CalculatePrice(self, kwargs):
-        kwargs['price'] = random.randint(1000, 9000)
-        return
-
-    def encode_locate(self, code, detail, longitude, latitude):
-        dct = {}
-        dct['region'] = data.CODE_LOCATION.get(code)
-        dct['detail'] = detail
-        dct['coords'] = [longitude, latitude]
-        return dct
-    
     def take_order(self, accid, orderid):
         indent = md_indent.Indent.query.filter_by(id=orderid).one()
         indent.tspid = accid
         db.session.commit()
         return jsonify(code=0, msg='success', data={'orderid':str(orderid)})
 
+def encode_locate(self, code, detail, longitude, latitude):
+    dct = {}
+    dct['region'] = data.CODE_LOCATION.get(code)
+    dct['detail'] = detail
+    dct['coords'] = [longitude, latitude]
+    return dct
+    
+def decode_locate(location):
+    region = location.get('region')
+    if region is None:
+        raise RuntimeError()
+    code = data.LOCATION_CODE.get(tuple(region))
+    if code is None:
+        raise RuntimeError()
+    detail = location.get('detail')
+    longitude, latitude = location.get('coords')
+    return code, detail, longitude, latitude
+
+def decode_order_data(data):
+    od = {}
+
+    status = data.get('status')
+    cargo_type = data.get('cargo_type')
+    rent_type = data.get('rent_type')
+    lct_depart = data.get('lct_depart')
+    lct_dest = data.get('lct_dest')
+    tmlst = data.get('times')
+    loader = data.get('loader')
+    unloader = data.get('unloader')
+    cargo = data.get('cargo')
+
+    od['status'] = status
+
+    if (cargo_type is None or rent_type is None or lct_depart is None
+        or lct_dest is None or tmlst is None or loader is None
+        or unloader is None):
+        raise RuntimeError()
+
+    if cargo_type not in CARGO_TYPE_ALL:
+        raise RuntimeError()
+    od['cargo_type'] = cargo_type
+
+    if rent_type not in RENT_TYPE_ALL:
+        raise RuntimeError()
+    od['rent_type'] = rent_type
+
+    code, detail, lon, lat = decode_locate(lct_depart)
+    od['dpt_lctcode'] = code
+    od['dpt_lctdtl'] = detail
+    od['dpt_lctlong'] = lon
+    od['dpt_lctlat'] = lat
+
+    code, detail, lon, lat = decode_locate(lct_dest)
+    od['dst_lctcode'] = code
+    od['dst_lctdtl'] = detail
+    od['dst_lctlong'] = lon
+    od['dst_lctlat'] = lat
+
+    #if not (tmlst[0] <= tmlst[1] < tmlst[2] <= tmlst[3]):
+    #    raise RuntimeError()
+    od['dpt_tmclk'] = tmlst[0]
+    od['dpt_tmload'] = tmlst[1]
+    od['dst_tmclk'] = tmlst[2]
+    od['dst_tmunload'] = tmlst[3]
+
+    od['dpt_ldrname'] = loader[0]
+    od['dpt_ldrphone'] = loader[1]
+    od['dst_uldrname'] = unloader[0]
+    od['dst_uldrphone'] = unloader[1]
+
+    od['cargo'] = cargo
+
+    return od
 
 @bp_order.route('/new', methods=['POST'])
 def order_new():
     print("order_new 000")
     dt = request.get_json(True)
     accid = dt.get('accid')
-    orderinfo = dt.get('order')
-    orderinfo['status'] = INDENT_STATUS_PUBLISHING 
+    orderdata = decode_order_data(dt.get('order'))
     print("order_new 111 %s"%(accid))
     orderid = gen_order_id()
-    new_order = OrderPool().add_new_order(accid, orderid, orderinfo)
+    new_order = OrderPool().add_new_order(accid, orderid, orderdata)
     return jsonify(code=0, msg='success', data={'orderid':str(orderid)})
 
 @bp_order.route('/list', methods=['POST'])
