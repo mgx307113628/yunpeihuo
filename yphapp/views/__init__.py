@@ -12,5 +12,5 @@ app.register_blueprint(user.bp_user, url_prefix='/user')
 from . import order
 app.register_blueprint(order.bp_order, url_prefix='/order')
 
-if app.config['DEBUG'] == True: #TODO 上线删除
-    from . import sample
+#if app.config['DEBUG'] == True: #TODO 上线删除
+#    from . import sample

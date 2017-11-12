@@ -137,11 +137,13 @@ class IndentPool:
                     break
             elif idx+1 == current:
                 send = True
+        self.indents_dct = {}
+        self.indents_lst = []
         return jsonify(code=0, msg='success', data={'orders':sendlst})
 
     def encode_order(self, indent):
         data = {}
-        data['orderid'] = indent.id
+        data['orderid'] = str(indent.id)
         data['status'] = indent.status.status
         data['cargo_type'] = indent.cargo_type
         data['rent_type'] = indent.rent_type
@@ -240,6 +242,12 @@ class IndentPool:
         dct['detail'] = detail
         dct['coords'] = [longitude, latitude]
         return dct
+    
+    def take_order(self, accid, orderid):
+        indent = md_indent.query.filter_by(id=orderid).one()
+        indent.tspid = accid
+        db.session.commit()
+        return jsonify(code=0, msg='success', data={'orderid':orderid})
 
 
 @bp_order.route('/new', methods=['POST'])
@@ -252,7 +260,7 @@ def order_new():
     print("order_new 111 %s"%(accid))
     orderid = gen_order_id()
     new_order = IndentPool().add_new_order(accid, orderid, orderinfo)
-    return jsonify(code=0, msg='success', data={'orderid':orderid})
+    return jsonify(code=0, msg='success', data={'orderid':str(orderid)})
 
 @bp_order.route('/list', methods=['POST'])
 def order_list():
@@ -262,3 +270,12 @@ def order_list():
     current = int(dt.get('current', 0))
     num = int(dt.get('num'))
     return IndentPool().show_orders(current, num)
+
+@bp_order.route('/take', methods=['POST'])
+def order_take():
+    print('order_take 111111111111111')
+    IndentPool().init_pool()
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    orderid = int(dt.get('orderid'))
+    return IndentPool().take_order(accid, orderid)

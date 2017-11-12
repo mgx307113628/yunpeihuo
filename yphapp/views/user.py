@@ -13,10 +13,11 @@ def user_register():
     print("user_register 111 %s %s"%(acc, pwd))
     account = md_account.Account(acc, pwd)
     account.transporter = md_account.Transporter()
+    account.consignor = md_account.Consignor()#TODO
     db.session.add(account)
     #db.session.add(transporter)
     db.session.commit()
-    print("user_register 222 %s %s %d"%(acc, pwd, account.id))
+    print("user_register 222 %s %s %d %s %s"%(acc, pwd, account.id, account.transporter, account.consignor))
     return jsonify(code=0, msg='success', data={'id':account.id, 'account':acc})
 
 @bp_user.route('/query', methods=['POST']) #TODO 上线删除
