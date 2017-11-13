@@ -156,6 +156,7 @@ class Order:
 
     def CalculatePrice(self):
         self.price = random.randint(1000, 9000)
+        #TODO 似乎没有随机性
         self.update = True
 
     def InsertTable(self):
