@@ -1,11 +1,12 @@
 import threading
 from flask import Blueprint, request, jsonify, json
 from .. import app, db, data
-from ..models import md_indent
+from ..models.indent import Indent, IndentNum
 from werkzeug.local import Local
 from ..define import *
 import time
 import random
+import datetime
 
 bp_order = Blueprint('order', __name__) 
 
@@ -50,10 +51,10 @@ def gen_order_id():
         raise RuntimeError()
 
     refresh = False
-    indent_num = md_indent.IndentNum.query.filter_by(process=process, thread=thread).first()
+    indent_num = IndentNum.query.filter_by(process=process, thread=thread).first()
     if indent_num is None:
         degree = index = 0
-        indent_num = md_indent.IndentNum(process, thread, degree, index)
+        indent_num = IndentNum(process, thread, degree, index)
         db.session.add(indent_num)
         refresh = True
     else:
@@ -158,8 +159,8 @@ class Order:
         self.update = True
 
     def InsertTable(self):
-        indent = md_indent.Indent(self.orderid, **self.__dict__)
-        db.session.add(indent)
+        indentob = Indent(self.orderid, **self.__dict__)
+        db.session.add(indentob)
         db.session.commit()
 
     def encode_order_data(self):
@@ -181,9 +182,9 @@ class Order:
         return self.cache
 
     def Take(self, accid):
-        indent = md_indent.Indent.query.filter_by(id=self.orderid).one()
-        indent.tspid = accid
-        indent.status.status = INDENT_STATUS_GOTOSTART
+        indentob = Indent.query.filter_by(id=self.orderid).one()
+        indentob.tspid = accid
+        indentob.status.status = INDENT_STATUS_GOTOSTART
         db.session.commit()
         self.tspid = accid
         self.status = INDENT_STATUS_GOTOSTART
@@ -203,34 +204,45 @@ class OrderPool:
             OrderPool._initflag = True
             self.order_dct = {}
             self.order_lst = []
+            self.csg_orders = {}
+            self.tsp_orders = {}
             self.update = False
 
     def init_pool(self):
-        for indent in md_indent.Indent.query.all():
+        for indentob in Indent.query.all():
             order = Order()
-            indent.SyncProp(order.__dict__)
+            indentob.SyncProp(order.__dict__)
             self.order_dct[order.orderid] = order
             self.order_lst.append(order)
+            self.csg_orders.setdefault(order.csgid, []).append(order)
+            if order.tspid:
+                self.tsp_orders.setdefault(order.tspid, []).append(order)
+        self.update = True
         return
 
     def add_new_order(self, accid, orderid, orderdata):
         orderdata.update({'orderid':orderid,
                             'csgid':accid,
-                            'status':INDENT_STATUS_PUBLISHING})
+                            'status':INDENT_STATUS_PUBLISHING,
+                            'crttime':datetime.datetime.now()})
         order = Order(**orderdata)
         order.CalculatePrice()
         order.InsertTable()
         self.order_dct[orderid] = order
         self.order_lst.append(order)
+        self.csg_orders.setdefault(accid, []).append(order)
         self.update = True
 
     def show_orders(self, current, num):
+        return self._send_list(self.order_lst, current, num)
+
+    def _send_list(self, orderlst, current, num):
         send_data = []
         send_flag = False
         n = 0
         if current == 0:
             send_flag = True
-        for idx, order in enumerate(self.order_lst):
+        for idx, order in enumerate(orderlst):
             if send_flag == True:
                 send_data.append(order.encode_order_data())
                 n += 1
@@ -240,13 +252,37 @@ class OrderPool:
                 send_flag = True
         return jsonify(code=0, msg='success', data={'orders':send_data})
 
-
     def take_order(self, accid, orderid):
         order = self.order_dct.get(orderid)
         if order is None:
             return jsonify(code=1, msg='order not exist')
         order.Take(accid)
+        self.tsp_orders.setdefault(accid, []).append(order)
+        self.update = True
         return jsonify(code=0, msg='success', data={'orderid':str(orderid)})
+
+    def list_mine(self, accid, role, current, num):
+        if role == ROLE_TYPE_CSGN:
+            orderlst = self.csg_orders.get(accid, [])
+        elif role == ROLE_TYPE_TRSP:
+            orderlst = self.tsp_orders.get(accid, [])
+        else:
+            raise RuntimeError
+        return self._send_list(orderlst, current, num)
+
+    def list_comp(self, accid, role, current, num):
+        if role == ROLE_TYPE_CSGN:
+            idtlst = Indent.query.filter(Indent.csgid==accid, Indent.status.status==INDENT_STATUS_COMPLETE).order_by(Indent.id)[current:current+num]
+        elif role == ROLE_TYPE_TRSP:
+            idtlst = Indent.query.filter(Indent.csgid==accid, Indent.status.status==INDENT_STATUS_COMPLETE).order_by(db.desc(Indent.id))[current:current+num]
+        else:
+            raise RuntimeError
+        orderlst = []
+        for idt in idtlst:
+            order = Order()
+            idt.SyncProp(order.__dict__)
+            orderlst.append(order)
+        return self._send_list(orderlst, 0, len(orderlst))
 
 def encode_locate(code, detail, longitude, latitude):
     dct = {}
@@ -350,3 +386,46 @@ def order_take():
     orderid = int(dt.get('orderid'))
     print('order_take 222222222222222 acc:%d  orderid:%d'%(accid, orderid))
     return OrderPool().take_order(accid, orderid)
+
+@bp_order.route('/cancel', methods=['POST'])
+def order_cancel():
+    print('order_cancel 111111111111111')
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    orderid = int(dt.get('orderid'))
+    print('order_cancel 222222222222222 acc:%d  orderid:%d'%(accid, orderid))
+    raise RuntimeError
+
+@bp_order.route('/list_mine', methods=['POST'])
+def order_list_mine():
+    print('order_list_mine 111111111111111')
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    role = int(dt.get('role'))
+    current = int(dt.get('current', 0))
+    num = int(dt.get('num'))
+    print('order_list_mine 222222222222222 acc:%d role:%d current:%d num:%d'%(accid, role, current, num))
+    return OrderPool().list_mine(accid, role, current, num)
+
+@bp_order.route('/list_comp', methods=['POST'])
+def order_list_comp():
+    print('order_list_comp 111111111111111')
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    role = int(dt.get('role'))
+    current = int(dt.get('current', 0))
+    num = int(dt.get('num'))
+    print('order_list_comp 222222222222222 acc:%d role:%d current:%d num:%d'%(accid, role, current, num))
+    return OrderPool().list_comp(accid, role, current, num)
+
+@bp_order.route('/setphoto', methods=['POST'])
+def order_setphoto():
+    raise RuntimeError
+    print('order_setphoto 111111111111111')
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    role = int(dt.get('role'))
+    current = int(dt.get('current', 0))
+    num = int(dt.get('num'))
+    print('order_setphoto 222222222222222 acc:%d role:%d current:%d num:%d'%(accid, role, current, num))
+    return OrderPool().setphoto(accid, role, current, num)

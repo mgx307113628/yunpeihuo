@@ -2,6 +2,7 @@ from .. import db
 import time
 from flask import json
 import datetime
+import decimal
 
 
 class IndentNum(db.Model):
@@ -28,6 +29,7 @@ class Indent(db.Model):
     cargo_type = db.Column(db.SmallInteger)
     rent_type = db.Column(db.SmallInteger)
     price = db.Column(db.Integer)
+    crttime = db.Column(db.TIMESTAMP)
 
     consignor = db.relationship('Consignor', uselist=False)
     transporter = db.relationship('Transporter', uselist=False)
@@ -42,6 +44,7 @@ class Indent(db.Model):
         'cargo_type'    : ['cargo_type', True, None],
         'rent_type'     : ['rent_type', True, None],
         'price'         : ['price', True, None],
+        'crttime'       : ['crttime', True, None],
         'status'        : {
                             'status' : ['status', True, None],
                           },
@@ -104,6 +107,8 @@ class Indent(db.Model):
                             value = datetime.datetime.fromtimestamp(value)
                         elif _k == 'cargo':
                             value = json.dumps(value)
+                        elif _k in ['dpt_lctlong', 'dpt_lctlat', 'dst_lctlong', 'dst_lctlat',]:
+                            value = decimal.Decimal(value)
                     setattr(sub, _k, value)
 
     def SyncProp(self, dct):
@@ -118,6 +123,8 @@ class Indent(db.Model):
                         value = int(time.mktime(value.timetuple()))
                     elif _k == 'cargo':
                         value = json.loads(value)
+                    elif _k in ['dpt_lctlong', 'dpt_lctlat', 'dst_lctlong', 'dst_lctlat',]:
+                        value = str(value)
                     dct[_v[0]] = value
 
     def __repr__(self):
@@ -129,8 +136,8 @@ class IndentDetail(db.Model):
 
     dpt_lctcode = db.Column(db.Integer)
     dpt_lctdtl = db.Column(db.String(50))
-    dpt_lctlong = db.Column(db.Float)
-    dpt_lctlat = db.Column(db.Float)
+    dpt_lctlong = db.Column(db.DECIMAL(9, 6))
+    dpt_lctlat = db.Column(db.DECIMAL(9, 6))
     dpt_tmclk = db.Column(db.TIMESTAMP)
     dpt_tmload = db.Column(db.Integer)
     dpt_ldrname = db.Column(db.String(20))
@@ -138,8 +145,8 @@ class IndentDetail(db.Model):
 
     dst_lctcode = db.Column(db.Integer)
     dst_lctdtl = db.Column(db.String(50))
-    dst_lctlong = db.Column(db.Float)
-    dst_lctlat = db.Column(db.Float)
+    dst_lctlong = db.Column(db.DECIMAL(9, 6))
+    dst_lctlat = db.Column(db.DECIMAL(9, 6))
     dst_tmclk = db.Column(db.TIMESTAMP)
     dst_tmunload = db.Column(db.Integer)
     dst_uldrname = db.Column(db.String(20))

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from .. import app, db
-from ..models import md_account
+from ..models import user
 import datetime
 
 bp_user = Blueprint('user', __name__) 
@@ -21,9 +21,9 @@ def user_register():
     #if role not in [ROLE_TYPE_NONE, ROLE_TYPE_TRSP, ROLE_TYPE_CSGN, ROLE_TYPE_CONV,]:
     #    raise RuntimeError
     #if role == ROLE_TYPE_TRSP:
-    #    account.transporter = md_account.Transporter()
+    #    account.transporter = user.Transporter()
     #elif role == ROLE_TYPE_CSGN:
-    #    account.consignor = md_account.Consignor()
+    #    account.consignor = user.Consignor()
     #elif role == ROLE_TYPE_CONV:
     #    pass
     #else:
@@ -31,15 +31,15 @@ def user_register():
     #account.crtplat = plat
     #account.crtrole = role
     print("user_register 111 %s %s"%(acc, pwd))
-    if md_account.Account.query.filter_by(acc=acc).first():
+    if user.Account.query.filter_by(acc=acc).first():
         return jsonify(code=1, msg='fail', data={'account':acc})
-    account = md_account.Account(acc, pwd)
+    account = user.Account(acc, pwd)
     account.crtip = ip
     account.crtmac = mac
     account.crttime = datetime.datetime.now()
     db.session.add(account)
-    account.transporter = md_account.Transporter()#TODO
-    account.consignor = md_account.Consignor()#TODO
+    account.transporter = user.Transporter()#TODO
+    account.consignor = user.Consignor()#TODO
     db.session.commit()
     print("user_register 222 %s %s %d %s %s"%(acc, pwd, account.id, account.transporter, account.consignor))
     return jsonify(code=0, msg='success', data={'id':account.id, 'account':acc})
@@ -61,9 +61,9 @@ def user_login():
     #if role not in [ROLE_TYPE_NONE, ROLE_TYPE_TRSP, ROLE_TYPE_CSGN, ROLE_TYPE_CONV,]:
     #    raise RuntimeError
     #if role == ROLE_TYPE_TRSP:
-    #    account.transporter = md_account.Transporter()
+    #    account.transporter = user.Transporter()
     #elif role == ROLE_TYPE_CSGN:
-    #    account.consignor = md_account.Consignor()
+    #    account.consignor = user.Consignor()
     #elif role == ROLE_TYPE_CONV:
     #    pass
     #else:
@@ -71,7 +71,7 @@ def user_login():
     #account.crtplat = plat
     #account.crtrole = role
     print("user_login %s %s"%(acc, pwd))
-    account = md_account.Account.query.filter_by(acc=acc, pwd=pwd).one()
+    account = user.Account.query.filter_by(acc=acc, pwd=pwd).one()
     account.lastip = ip
     account.lastmac = mac
     account.lasttime = datetime.datetime.now()
