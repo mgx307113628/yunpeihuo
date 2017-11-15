@@ -1,7 +1,7 @@
 import threading
 from flask import Blueprint, request, jsonify, json
 from .. import app, db, data
-from ..models.indent import Indent, IndentNum
+from ..models.indent import Indent, IndentNum, IndentStatus
 from werkzeug.local import Local
 from ..define import *
 import time
@@ -191,6 +191,13 @@ class Order:
         self.status = INDENT_STATUS_GOTOSTART
         self.update = True
 
+    def SetStatus(self, status):
+        indentob = Indent.query.filter_by(id=self.orderid).one()
+        indentob.status.status = status
+        db.session.commit()
+        self.status = status
+        self.update = True
+
 
 class OrderPool:
     _instance = None
@@ -273,9 +280,9 @@ class OrderPool:
 
     def list_comp(self, accid, role, current, num):
         if role == ROLE_TYPE_CSGN:
-            idtlst = Indent.query.filter(Indent.csgid==accid, Indent.status.status==INDENT_STATUS_COMPLETE).order_by(Indent.id)[current:current+num]
+            idtlst = Indent.query.join(IndentStatus).filter(Indent.csgid==accid, IndentStatus.status==INDENT_STATUS_COMPLETE).order_by(Indent.id)[current:current+num]
         elif role == ROLE_TYPE_TRSP:
-            idtlst = Indent.query.filter(Indent.csgid==accid, Indent.status.status==INDENT_STATUS_COMPLETE).order_by(db.desc(Indent.id))[current:current+num]
+            idtlst = Indent.query.join(IndentStatus).filter(Indent.tspid==accid, IndentStatus.status==INDENT_STATUS_COMPLETE).order_by(db.desc(Indent.id))[current:current+num]
         else:
             raise RuntimeError
         orderlst = []
@@ -284,6 +291,19 @@ class OrderPool:
             idt.SyncProp(order.__dict__)
             orderlst.append(order)
         return self._send_list(orderlst, 0, len(orderlst))
+
+    def event_order(self, accid, orderid, event):
+        event_status = {
+                'start':3,
+                'load_complete':4,
+                'load_confirm':5,
+                'arrive':6,
+                'unload_complete':7,
+                'unload_confirm':8,
+        }
+        order = self.order_dct.get(orderid)
+        order.SetStatus(event_status[event])
+        return jsonify(code=0, msg='success', data={'orderid':str(orderid)})
 
 def encode_locate(code, detail, longitude, latitude):
     dct = {}
@@ -430,3 +450,58 @@ def order_setphoto():
     num = int(dt.get('num'))
     print('order_setphoto 222222222222222 acc:%d role:%d current:%d num:%d'%(accid, role, current, num))
     return OrderPool().setphoto(accid, role, current, num)
+
+@bp_order.route('/start', methods=['POST'])
+def order_start():
+    event = 'start'
+    print('order_event: %s 111111111111111'%event)
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    orderid = int(dt.get('orderid'))
+    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
+    return OrderPool().event_order(accid, orderid, status)
+@bp_order.route('/load_complete', methods=['POST'])
+def order_load_comp():
+    event = 'load_complete'
+    print('order_event: %s 111111111111111'%event)
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    orderid = int(dt.get('orderid'))
+    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
+    return OrderPool().event_order(accid, orderid, status)
+@bp_order.route('/load_confirm', methods=['POST'])
+def order_load_confirm():
+    event = 'load_confirm'
+    print('order_event: %s 111111111111111'%event)
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    orderid = int(dt.get('orderid'))
+    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
+    return OrderPool().event_order(accid, orderid, status)
+@bp_order.route('/arrive', methods=['POST'])
+def order_arrive():
+    event = 'arrive'
+    print('order_event: %s 111111111111111'%event)
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    orderid = int(dt.get('orderid'))
+    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
+    return OrderPool().event_order(accid, orderid, status)
+@bp_order.route('/unload_complete', methods=['POST'])
+def order_unload_comp():
+    event = 'unload_complete'
+    print('order_event: %s 111111111111111'%event)
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    orderid = int(dt.get('orderid'))
+    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
+    return OrderPool().event_order(accid, orderid, status)
+@bp_order.route('/unload_confirm', methods=['POST'])
+def order_unload_confirm():
+    event = 'unload_confirm'
+    print('order_event: %s 111111111111111'%event)
+    dt = request.get_json(True)
+    accid = int(dt.get('accid'))
+    orderid = int(dt.get('orderid'))
+    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
+    return OrderPool().event_order(accid, orderid, status)
