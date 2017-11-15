@@ -451,57 +451,13 @@ def order_setphoto():
     print('order_setphoto 222222222222222 acc:%d role:%d current:%d num:%d'%(accid, role, current, num))
     return OrderPool().setphoto(accid, role, current, num)
 
-@bp_order.route('/start', methods=['POST'])
-def order_start():
-    event = 'start'
+@bp_order.route('/<event>', methods=['POST'])
+def order_event(event):
+    if event not in ('start', 'load_complete', 'load_confirm', 'arrive', 'unload_complete', 'unload_confirm'):
+        return jsonify(code=1, msg='success')
     print('order_event: %s 111111111111111'%event)
     dt = request.get_json(True)
     accid = int(dt.get('accid'))
     orderid = int(dt.get('orderid'))
     print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
-    return OrderPool().event_order(accid, orderid, status)
-@bp_order.route('/load_complete', methods=['POST'])
-def order_load_comp():
-    event = 'load_complete'
-    print('order_event: %s 111111111111111'%event)
-    dt = request.get_json(True)
-    accid = int(dt.get('accid'))
-    orderid = int(dt.get('orderid'))
-    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
-    return OrderPool().event_order(accid, orderid, status)
-@bp_order.route('/load_confirm', methods=['POST'])
-def order_load_confirm():
-    event = 'load_confirm'
-    print('order_event: %s 111111111111111'%event)
-    dt = request.get_json(True)
-    accid = int(dt.get('accid'))
-    orderid = int(dt.get('orderid'))
-    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
-    return OrderPool().event_order(accid, orderid, status)
-@bp_order.route('/arrive', methods=['POST'])
-def order_arrive():
-    event = 'arrive'
-    print('order_event: %s 111111111111111'%event)
-    dt = request.get_json(True)
-    accid = int(dt.get('accid'))
-    orderid = int(dt.get('orderid'))
-    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
-    return OrderPool().event_order(accid, orderid, status)
-@bp_order.route('/unload_complete', methods=['POST'])
-def order_unload_comp():
-    event = 'unload_complete'
-    print('order_event: %s 111111111111111'%event)
-    dt = request.get_json(True)
-    accid = int(dt.get('accid'))
-    orderid = int(dt.get('orderid'))
-    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
-    return OrderPool().event_order(accid, orderid, status)
-@bp_order.route('/unload_confirm', methods=['POST'])
-def order_unload_confirm():
-    event = 'unload_confirm'
-    print('order_event: %s 111111111111111'%event)
-    dt = request.get_json(True)
-    accid = int(dt.get('accid'))
-    orderid = int(dt.get('orderid'))
-    print('order_event: %s 222222222222222 acc:%d  orderid:%d'%(event, accid, orderid))
-    return OrderPool().event_order(accid, orderid, status)
+    return OrderPool().event_order(accid, orderid, event)
